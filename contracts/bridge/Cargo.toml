@@ -1,0 +1,16 @@
+[package]
+name = "pesakit-bridge"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+soroban-sdk = "21"
+
+# `testutils` pulls in host-only code that does not build for wasm32,
+# so it stays out of the contract build.
+[dev-dependencies]
+soroban-sdk = { version = "21", features = ["testutils"] }

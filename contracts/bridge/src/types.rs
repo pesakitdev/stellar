@@ -2,6 +2,7 @@ use soroban_sdk::{contracterror, contracttype, Address, String};
 
 /// Top-level bridge configuration and state.
 #[contracttype]
+#[derive(Debug)]
 pub struct BridgeState {
     /// Contract admin (PesaKit operations key).
     pub admin: Address,
@@ -21,6 +22,7 @@ pub struct BridgeState {
 
 /// Per-agent state stored on-chain.
 #[contracttype]
+#[derive(Debug)]
 pub struct AgentAccount {
     /// The agent's Stellar account ID (recipient of USDC).
     pub stellar_address: Address,
@@ -36,6 +38,7 @@ pub struct AgentAccount {
 
 /// Immutable record of a single conversion, keyed by conversion_id.
 #[contracttype]
+#[derive(Debug)]
 pub struct ConversionRecord {
     /// Unique, generated off-chain, max 64 chars.
     pub conversion_id: String,
@@ -48,6 +51,8 @@ pub struct ConversionRecord {
     pub usdc_amount: i128,
     pub timestamp: u64,
     pub ledger_sequence: u32,
+    /// Set by `reverse_convert`. The record itself is never deleted.
+    pub reversed: bool,
 }
 
 /// Contract error codes.
@@ -70,4 +75,12 @@ pub enum BridgeError {
     DuplicateConversionId = 9,
     InsufficientReserve = 10,
     InvalidAddress = 11,
+    /// Added in Tranche 1: no conversion exists for the given ID.
+    ConversionNotFound = 12,
+    /// Added in Tranche 1: the conversion was already reversed.
+    AlreadyReversed = 13,
+    /// Added in Tranche 1: ID is empty or longer than its maximum length.
+    InvalidId = 14,
+    /// Added in Tranche 1: the agent is already registered.
+    AgentAlreadyRegistered = 15,
 }

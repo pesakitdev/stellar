@@ -1,2 +1,5 @@
 /target
 **/target
+
+# Soroban test output
+test_snapshots/

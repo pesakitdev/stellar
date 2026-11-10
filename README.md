@@ -47,9 +47,12 @@ Every successful conversion emits a `ConversionCompleted` event, making cumulati
 
 ```bash
 cargo check --target wasm32-unknown-unknown
+cargo test --manifest-path contracts/bridge/Cargo.toml
 ```
 
-Note that this is a skeleton; `todo!()` stubs replace full implementations.
+The contract implements the full interface in `contracts/bridge/src/lib.rs`. The unit tests in `contracts/bridge/src/test.rs` cover the limits, pause, duplicate-ID checks, reversals, and admin functions.
+
+Conversions move USDC from the reserve account to the agent with a token transfer. The reserve account must authorize that transfer. The Stellar Service collects this authorization from the 2-of-3 reserve signers.
 
 ## Testnet Deployment
 

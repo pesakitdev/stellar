@@ -23,7 +23,7 @@ Full interactive diagram: <https://pesakit.ai/stellar/PesaKit-Stellar-Architectu
 | `initialize` | One-time setup: admin, USDC token, reserve account, limits | Deployer (once) |
 | `register_agent` | Register an agent's Stellar address | Admin |
 | `convert` | Record a KES→USDC conversion and credit USDC | Stellar Service (admin-authorized) |
-| `reverse_convert` | Reverse a conversion for error recovery | Admin |
+| `reverse_convert` | Reverse a conversion for error recovery, with a short reason code | Admin |
 | `pause` / `unpause` | Halt or resume new conversions | Admin |
 | `set_limits` | Update per-transaction or daily limits | Admin |
 | `transfer_admin` | Hand the admin role to a new address | Admin |
@@ -36,6 +36,8 @@ Full interactive diagram: <https://pesakit.ai/stellar/PesaKit-Stellar-Architectu
 ## On-chain Metric
 
 Every successful conversion emits a `ConversionCompleted` event, making cumulative USDC independently verifiable on Stellar Horizon or stellar.expert without access to PesaKit's internal systems. The metric is the sum of `usdc_amount` across all `ConversionCompleted` events emitted by this contract.
+
+A reversal emits a `ConversionReversed` event with the conversion ID, agent ID, agent address, USDC amount and a reason code of at most 32 characters (for example `duplicate_payment`). The original `ConversionCompleted` event stays on the ledger, so the gross metric is unchanged and the net amount is the completed total minus the reversed total. Reversal frees the agent's limits and flags the record; it does not move USDC. The reason is public, so it is a code and never personal data.
 
 ## Transaction Limits
 

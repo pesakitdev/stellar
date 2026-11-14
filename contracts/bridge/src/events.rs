@@ -17,6 +17,23 @@ pub fn emit_conversion_completed(
     );
 }
 
+/// Emitted when the admin reverses a conversion. The original
+/// ConversionCompleted event stays on the ledger; consumers net the two.
+/// `reason` is a short code (for example `duplicate_payment`), never free text.
+pub fn emit_conversion_reversed(
+    env: &Env,
+    conversion_id: String,
+    agent_id: String,
+    stellar_address: Address,
+    usdc_amount: i128,
+    reason: String,
+) {
+    env.events().publish(
+        (Symbol::new(env, "ConversionReversed"), stellar_address.clone()),
+        (conversion_id, agent_id, stellar_address, usdc_amount, reason),
+    );
+}
+
 pub fn emit_bridge_paused(env: &Env, by: Address) {
     env.events().publish((Symbol::new(env, "BridgePaused"),), (by,));
 }

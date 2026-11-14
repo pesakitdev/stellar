@@ -17,6 +17,9 @@ const SECONDS_PER_DAY: u64 = 86_400;
 const MAX_CONVERSION_ID_LEN: u32 = 64;
 /// agent_id is PesaKit's internal ID and may be at most 32 characters.
 const MAX_AGENT_ID_LEN: u32 = 32;
+/// A reversal reason is a short code such as `duplicate_payment`. It is
+/// published in the ConversionReversed event, so it must never hold personal data.
+const MAX_REASON_LEN: u32 = 32;
 
 fn day_of(timestamp: u64) -> u64 {
     timestamp / SECONDS_PER_DAY
@@ -193,16 +196,17 @@ impl PesaKitBridge {
     /// Marks the conversion record as reversed and removes its amount from the
     /// agent's lifetime and daily totals, so the agent's limits reflect net
     /// credits. USDC is not moved on-chain here; see README.
-    /// `reason` is accepted for the operator's audit trail but is not stored,
-    /// because no event or record field is defined for it in the TRD.
+    /// Emits ConversionReversed with `reason`, a short code of at most 32
+    /// characters (for example `duplicate_payment`), so off-chain systems can
+    /// follow reversals from the event stream.
     pub fn reverse_convert(
         env: Env,
         conversion_id: String,
         reason: String,
     ) -> Result<(), BridgeError> {
-        let _ = reason;
         let state = load_state(&env)?;
         state.admin.require_auth();
+        check_id(&reason, MAX_REASON_LEN)?;
 
         let mut record = storage::get_conversion(&env, &conversion_id)
             .ok_or(BridgeError::ConversionNotFound)?;
@@ -226,6 +230,15 @@ impl PesaKitBridge {
             agent.today_converted = daily;
             storage::set_agent(&env, &record.agent_id, &agent);
         }
+
+        events::emit_conversion_reversed(
+            &env,
+            conversion_id,
+            record.agent_id,
+            record.stellar_address,
+            record.usdc_amount,
+            reason,
+        );
         Ok(())
     }
 

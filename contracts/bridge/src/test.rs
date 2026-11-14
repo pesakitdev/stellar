@@ -4,9 +4,9 @@ extern crate std;
 use std::boxed::Box;
 
 use soroban_sdk::{
-    testutils::{Address as _, Ledger},
+    testutils::{Address as _, Events, Ledger},
     token::{Client as TokenClient, StellarAssetClient},
-    Address, Env, String,
+    vec, Address, Env, IntoVal, String, Symbol,
 };
 
 use crate::types::BridgeError;
@@ -244,7 +244,7 @@ fn reverse_marks_record_and_reduces_limits() {
         .convert(&sid(&f, "conv-1"), &sid(&f, "agent-1"), &1, &(80 * USDC));
 
     f.client
-        .reverse_convert(&sid(&f, "conv-1"), &sid(&f, "bank error"));
+        .reverse_convert(&sid(&f, "conv-1"), &sid(&f, "duplicate_payment"));
 
     assert!(f.client.get_conversion(&sid(&f, "conv-1")).reversed);
     assert_eq!(f.client.get_agent_daily_total(&sid(&f, "agent-1")), 0);
@@ -259,6 +259,55 @@ fn reverse_marks_record_and_reduces_limits() {
         .client
         .try_reverse_convert(&sid(&f, "conv-1"), &sid(&f, "again"));
     assert_eq!(again.unwrap_err().unwrap(), BridgeError::AlreadyReversed);
+}
+
+#[test]
+fn reverse_emits_conversion_reversed_event() {
+    let f = setup();
+    f.client
+        .convert(&sid(&f, "conv-1"), &sid(&f, "agent-1"), &1, &(80 * USDC));
+    f.client
+        .reverse_convert(&sid(&f, "conv-1"), &sid(&f, "duplicate_payment"));
+
+    let events = f.env.events().all();
+    let last = events.slice(events.len() - 1..);
+    assert_eq!(
+        last,
+        vec![
+            &f.env,
+            (
+                f.client.address.clone(),
+                (Symbol::new(&f.env, "ConversionReversed"), f.agent_wallet.clone()).into_val(&f.env),
+                (
+                    sid(&f, "conv-1"),
+                    sid(&f, "agent-1"),
+                    f.agent_wallet.clone(),
+                    80 * USDC,
+                    sid(&f, "duplicate_payment"),
+                )
+                    .into_val(&f.env),
+            ),
+        ]
+    );
+}
+
+#[test]
+fn reverse_rejects_empty_or_long_reasons() {
+    let f = setup();
+    f.client
+        .convert(&sid(&f, "conv-1"), &sid(&f, "agent-1"), &1, &USDC);
+
+    let empty = f.client.try_reverse_convert(&sid(&f, "conv-1"), &sid(&f, ""));
+    assert_eq!(empty.unwrap_err().unwrap(), BridgeError::InvalidId);
+
+    let long = f.client.try_reverse_convert(
+        &sid(&f, "conv-1"),
+        &sid(&f, "a_reason_code_that_is_over_32_chars"),
+    );
+    assert_eq!(long.unwrap_err().unwrap(), BridgeError::InvalidId);
+
+    // A rejected reversal changes nothing.
+    assert!(!f.client.get_conversion(&sid(&f, "conv-1")).reversed);
 }
 
 #[test]

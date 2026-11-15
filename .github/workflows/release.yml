@@ -1,0 +1,20 @@
+name: Build and Release
+
+# Runs when a version tag (for example v0.2.0) is pushed. It builds the bridge contract,
+# publishes a GitHub release with the wasm and its SHA-256 hash, and sends the hash,
+# repository and commit to Stellar Expert so the contract page links to this source.
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release-bridge:
+    uses: stellar-expert/soroban-build-workflow/.github/workflows/release.yml@main
+    with:
+      release_name: ${{ github.ref_name }}
+      release_description: 'PesaKit bridge contract'
+      relative_path: '["contracts/bridge"]'
+      package: 'pesakit-bridge'
+    secrets:
+      release_token: ${{ secrets.GITHUB_TOKEN }}

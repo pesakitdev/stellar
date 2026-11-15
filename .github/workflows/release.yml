@@ -19,7 +19,7 @@ jobs:
     with:
       release_name: ${{ github.ref_name }}
       release_description: 'PesaKit bridge contract'
-      relative_path: '["contracts/bridge"]'
+      relative_path: 'contracts/bridge'
       package: 'pesakit-bridge'
     secrets:
       release_token: ${{ secrets.GITHUB_TOKEN }}

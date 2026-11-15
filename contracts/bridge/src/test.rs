@@ -292,10 +292,10 @@ fn reverse_emits_conversion_reversed_event() {
     f.client
         .reverse_convert(&sid(&f, "conv-1"), &sid(&f, "duplicate_payment"));
 
+    // events().all() returns the events of the last call, which is the reversal.
     let events = f.env.events().all();
-    let last = events.slice(events.len() - 1..);
     assert_eq!(
-        last,
+        events,
         vec![
             &f.env,
             (

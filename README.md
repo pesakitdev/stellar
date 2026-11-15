@@ -48,9 +48,11 @@ A reversal emits a `ConversionReversed` event with the conversion ID, agent ID, 
 ## Build
 
 ```bash
-cargo check --target wasm32-unknown-unknown
+cargo check --target wasm32v1-none
 cargo test --manifest-path contracts/bridge/Cargo.toml
 ```
+
+Build the deployable contract with the Stellar CLI, which sets the build markers that soroban-sdk requires: `stellar contract build`. Use `wasm32v1-none`, not `wasm32-unknown-unknown`: the SDK refuses the latter on Rust 1.82 and later.
 
 The contract implements the full interface in `contracts/bridge/src/lib.rs`. The unit tests in `contracts/bridge/src/test.rs` cover the limits, pause, duplicate-ID checks, reversals, and admin functions.
 

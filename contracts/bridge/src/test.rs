@@ -38,7 +38,9 @@ fn setup() -> Fixture {
 
     let admin = Address::generate(env);
     let token_admin = Address::generate(env);
-    let usdc = env.register_stellar_asset_contract_v2(token_admin).address();
+    let usdc = env
+        .register_stellar_asset_contract_v2(token_admin)
+        .address();
     let reserve = Address::generate(env);
     let agent_wallet = Address::generate(env);
 
@@ -85,7 +87,10 @@ fn initialize_twice_fails() {
     let result = f
         .client
         .try_initialize(&f.admin, &f.usdc, &f.reserve, &MAX_PER_TX, &MAX_PER_DAY);
-    assert_eq!(result.unwrap_err().unwrap(), BridgeError::AlreadyInitialized);
+    assert_eq!(
+        result.unwrap_err().unwrap(),
+        BridgeError::AlreadyInitialized
+    );
 }
 
 #[test]
@@ -124,7 +129,10 @@ fn convert_transfers_usdc_and_updates_metric() {
     assert_eq!(token_balance(&f, &f.agent_wallet), 50 * USDC);
     assert_eq!(token_balance(&f, &f.reserve), 10_000 * USDC - 50 * USDC);
     assert_eq!(f.client.get_total_converted(), 50 * USDC);
-    assert_eq!(f.client.get_agent_daily_total(&sid(&f, "agent-1")), 50 * USDC);
+    assert_eq!(
+        f.client.get_agent_daily_total(&sid(&f, "agent-1")),
+        50 * USDC
+    );
 
     let agent = f.client.get_agent(&sid(&f, "agent-1"));
     assert_eq!(agent.lifetime_converted, 50 * USDC);
@@ -169,7 +177,10 @@ fn convert_enforces_daily_limit_and_resets_next_day() {
     f.env.ledger().with_mut(|l| l.timestamp = 11 * DAY + 5);
     f.client
         .convert(&sid(&f, "conv-3"), &sid(&f, "agent-1"), &1, &(70 * USDC));
-    assert_eq!(f.client.get_agent_daily_total(&sid(&f, "agent-1")), 70 * USDC);
+    assert_eq!(
+        f.client.get_agent_daily_total(&sid(&f, "agent-1")),
+        70 * USDC
+    );
     assert_eq!(f.client.get_total_converted(), 160 * USDC);
 }
 
@@ -184,7 +195,10 @@ fn convert_rejects_non_positive_amounts() {
     let negative_kes = f
         .client
         .try_convert(&sid(&f, "conv-2"), &sid(&f, "agent-1"), &-1, &USDC);
-    assert_eq!(negative_kes.unwrap_err().unwrap(), BridgeError::InvalidAmount);
+    assert_eq!(
+        negative_kes.unwrap_err().unwrap(),
+        BridgeError::InvalidAmount
+    );
 }
 
 #[test]
@@ -195,7 +209,10 @@ fn convert_rejects_duplicate_conversion_id() {
     let dup = f
         .client
         .try_convert(&sid(&f, "conv-1"), &sid(&f, "agent-1"), &1, &USDC);
-    assert_eq!(dup.unwrap_err().unwrap(), BridgeError::DuplicateConversionId);
+    assert_eq!(
+        dup.unwrap_err().unwrap(),
+        BridgeError::DuplicateConversionId
+    );
 }
 
 #[test]
@@ -204,7 +221,10 @@ fn convert_rejects_unregistered_agent() {
     let result = f
         .client
         .try_convert(&sid(&f, "conv-1"), &sid(&f, "ghost"), &1, &USDC);
-    assert_eq!(result.unwrap_err().unwrap(), BridgeError::AgentNotRegistered);
+    assert_eq!(
+        result.unwrap_err().unwrap(),
+        BridgeError::AgentNotRegistered
+    );
 }
 
 #[test]
@@ -217,7 +237,10 @@ fn convert_rejects_when_reserve_is_short() {
     let result = f
         .client
         .try_convert(&sid(&f, "conv-1"), &sid(&f, "agent-1"), &1, &USDC);
-    assert_eq!(result.unwrap_err().unwrap(), BridgeError::InsufficientReserve);
+    assert_eq!(
+        result.unwrap_err().unwrap(),
+        BridgeError::InsufficientReserve
+    );
 }
 
 #[test]
@@ -277,7 +300,11 @@ fn reverse_emits_conversion_reversed_event() {
             &f.env,
             (
                 f.client.address.clone(),
-                (Symbol::new(&f.env, "ConversionReversed"), f.agent_wallet.clone()).into_val(&f.env),
+                (
+                    Symbol::new(&f.env, "ConversionReversed"),
+                    f.agent_wallet.clone()
+                )
+                    .into_val(&f.env),
                 (
                     sid(&f, "conv-1"),
                     sid(&f, "agent-1"),
@@ -297,7 +324,9 @@ fn reverse_rejects_empty_or_long_reasons() {
     f.client
         .convert(&sid(&f, "conv-1"), &sid(&f, "agent-1"), &1, &USDC);
 
-    let empty = f.client.try_reverse_convert(&sid(&f, "conv-1"), &sid(&f, ""));
+    let empty = f
+        .client
+        .try_reverse_convert(&sid(&f, "conv-1"), &sid(&f, ""));
     assert_eq!(empty.unwrap_err().unwrap(), BridgeError::InvalidId);
 
     let long = f.client.try_reverse_convert(

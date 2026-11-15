@@ -208,8 +208,8 @@ impl PesaKitBridge {
         state.admin.require_auth();
         check_id(&reason, MAX_REASON_LEN)?;
 
-        let mut record = storage::get_conversion(&env, &conversion_id)
-            .ok_or(BridgeError::ConversionNotFound)?;
+        let mut record =
+            storage::get_conversion(&env, &conversion_id).ok_or(BridgeError::ConversionNotFound)?;
         if record.reversed {
             return Err(BridgeError::AlreadyReversed);
         }
@@ -218,8 +218,8 @@ impl PesaKitBridge {
 
         // `total_converted` is intentionally not decreased: it mirrors the sum of
         // ConversionCompleted events, which cannot be retracted.
-        let mut agent = storage::get_agent(&env, &record.agent_id)
-            .ok_or(BridgeError::AgentNotRegistered)?;
+        let mut agent =
+            storage::get_agent(&env, &record.agent_id).ok_or(BridgeError::AgentNotRegistered)?;
         agent.lifetime_converted -= record.usdc_amount;
         storage::set_agent(&env, &record.agent_id, &agent);
 
@@ -312,7 +312,10 @@ impl PesaKitBridge {
     }
 
     /// Read a specific conversion record by ID.
-    pub fn get_conversion(env: Env, conversion_id: String) -> Result<ConversionRecord, BridgeError> {
+    pub fn get_conversion(
+        env: Env,
+        conversion_id: String,
+    ) -> Result<ConversionRecord, BridgeError> {
         storage::get_conversion(&env, &conversion_id).ok_or(BridgeError::ConversionNotFound)
     }
 

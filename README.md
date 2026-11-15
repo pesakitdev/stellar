@@ -62,20 +62,20 @@ Conversions move USDC from the reserve account to the agent with a token transfe
 
 The bridge contract is deployed on Stellar testnet. The current version is built with soroban-sdk 28 and emits `ConversionReversed` events.
 
-- Testnet contract ID: `CDOO6HK7UJYBCDKC6WKIWI4AFEM2GGZ6I7R5TYG2YLANL7EYUX7PSOHF`
+- Testnet contract ID: `CB4XNHY22TXAI2OUMUGHIK2I3S7BWCTJNV6ERFWDLJBKJMZRTJDVKZTE`
 - Test USDC (testnet only, no value): `CATPOI2F4AXIPYIMLA2Z6FNEXXHDLT3RKVKTGG3FGLASXXBOIS5MSP3J`
 - Network: Stellar testnet (`Test SDF Network ; September 2015`)
+- Wasm hash: `8ec12e421a7b11fc61a044edddac1ab59c79044deaec0fd77dd40a2ff276c3c1`, built by the release workflow at tag `v0.2.3`. [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CB4XNHY22TXAI2OUMUGHIK2I3S7BWCTJNV6ERFWDLJBKJMZRTJDVKZTE) links this contract to the source.
 
 ### Verifying the testnet contract
 
 Anyone can check that the deployed contract matches this source:
 
-1. Clone `https://github.com/pesakitdev/stellar` and check out commit `7bbe487` (or a later commit that does not change `contracts/bridge`).
-2. In `contracts/bridge`, run `stellar contract build`.
-3. Hash the output file `target/wasm32v1-none/release/pesakit_bridge.wasm` with SHA-256.
-4. The hash should be `16b1b4739d0225dab9a7036be7cb6778a31bae50af124b0d028659744e17355b`, the wasm hash of contract `CDOO6HK7UJYBCDKC6WKIWI4AFEM2GGZ6I7R5TYG2YLANL7EYUX7PSOHF` on the explorer.
+1. Open the [v0.2.3 release](https://github.com/pesakitdev/stellar/releases) and download `pesakit-bridge_v0.1.0.wasm`.
+2. Hash the file with SHA-256. The hash should be `8ec12e421a7b11fc61a044edddac1ab59c79044deaec0fd77dd40a2ff276c3c1`, the wasm hash of contract `CB4XNHY22TXAI2OUMUGHIK2I3S7BWCTJNV6ERFWDLJBKJMZRTJDVKZTE`.
+3. To rebuild it yourself, use the release workflow (`.github/workflows/release.yml`), which builds on GitHub with pinned tooling. A local `stellar contract build` gives a different hash, so compare against the release asset.
 
-Earlier testnet builds, kept for reference: `CC7IHCWLG25EORHZLWEWSTQGXKMUO2TK2TDVCMFNCB6ISCDWGWE75Q6P` (soroban-sdk 21, with the reversal event) and `CBHBAUR2ITTAU5GV7XWZFDI4TW3JVOJC27UDLXBGNBK6EAYPO62747MC` (without it). Mainnet deployment is not yet scheduled; the testnet deployment is part of Tranche 1 (target: January 2027).
+Earlier testnet builds, kept for reference: `CDOO6HK7UJYBCDKC6WKIWI4AFEM2GGZ6I7R5TYG2YLANL7EYUX7PSOHF` (soroban-sdk 28, built locally, not linked on the explorer), `CC7IHCWLG25EORHZLWEWSTQGXKMUO2TK2TDVCMFNCB6ISCDWGWE75Q6P` (soroban-sdk 21, with the reversal event) and `CBHBAUR2ITTAU5GV7XWZFDI4TW3JVOJC27UDLXBGNBK6EAYPO62747MC` (without it). Mainnet deployment is not yet scheduled; the testnet deployment is part of Tranche 1 (target: January 2027).
 
 ## Integration Partners
 

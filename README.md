@@ -42,7 +42,7 @@ A reversal emits a `ConversionReversed` event with the conversion ID, agent ID, 
 ## Transaction Limits
 
 - Maximum per transaction: $100 USDC
-- Maximum per agent per day: KSh 100,000 (~$750 USDC)
+- Maximum per agent per day: KSh 100,000 (about $750 at the current rate), enforced by the Bridge Controller. The contract enforces a USDC daily cap as a backstop.
 - Bridge reserve: 2-of-3 multisig account, all keys held by PesaKit
 
 ## Build
@@ -70,9 +70,10 @@ Earlier testnet builds, kept for reference: `CC7IHCWLG25EORHZLWEWSTQGXKMUO2TK2TD
 
 ## Integration Partners
 
-- [SoroSwap](https://soroswap.finance): Soroban DEX; agents supply USDC as LP to earn yield
+- [SoroSwap](https://soroswap.finance): Soroban DEX; agents supply USDC as LP to earn yield. SoroSwap is used only for LP and yield deposits, never for cross-border sends.
 - [DeFindex](https://defindex.io): managed yield strategies on Stellar
 - [Aquarius](https://aqua.network): liquidity aggregation layer routing through SoroSwap
+- MoneyGram (future phase): cash-in and cash-out at agent locations for diaspora remittances. It is not part of this contract or the current bridge.
 
 ## SCF Grant
 

@@ -33,7 +33,7 @@ fn setup() -> Fixture {
     env.mock_all_auths();
     env.ledger().with_mut(|l| l.timestamp = 10 * DAY);
 
-    let contract_id = env.register_contract(None, PesaKitBridge);
+    let contract_id = env.register(PesaKitBridge, ());
     let client = PesaKitBridgeClient::new(env, &contract_id);
 
     let admin = Address::generate(env);
@@ -97,7 +97,7 @@ fn initialize_twice_fails() {
 fn initialize_rejects_non_positive_limits() {
     let env = Env::default();
     env.mock_all_auths();
-    let contract_id = env.register_contract(None, PesaKitBridge);
+    let contract_id = env.register(PesaKitBridge, ());
     let client = PesaKitBridgeClient::new(&env, &contract_id);
     let a = Address::generate(&env);
     let result = client.try_initialize(&a, &a, &a, &0, &MAX_PER_DAY);
@@ -107,7 +107,7 @@ fn initialize_rejects_non_positive_limits() {
 #[test]
 fn calls_before_initialize_fail() {
     let env = Env::default();
-    let contract_id = env.register_contract(None, PesaKitBridge);
+    let contract_id = env.register(PesaKitBridge, ());
     let client = PesaKitBridgeClient::new(&env, &contract_id);
     let result = client.try_get_state();
     assert_eq!(result.unwrap_err().unwrap(), BridgeError::NotInitialized);

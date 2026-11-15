@@ -1,3 +1,8 @@
+// `events().publish` is deprecated in soroban-sdk 28 in favour of #[contractevent]. The
+// deployed events keep this wire format (topic names and data tuples), which consumers
+// parse, so the deprecation is allowed here rather than changing the format.
+#![allow(deprecated)]
+
 use soroban_sdk::{Address, Env, String, Symbol};
 
 /// Emitted on every successful conversion. This is the on-chain metric

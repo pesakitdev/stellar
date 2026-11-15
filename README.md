@@ -66,6 +66,15 @@ The bridge contract is deployed on Stellar testnet. The current version is built
 - Test USDC (testnet only, no value): `CATPOI2F4AXIPYIMLA2Z6FNEXXHDLT3RKVKTGG3FGLASXXBOIS5MSP3J`
 - Network: Stellar testnet (`Test SDF Network ; September 2015`)
 
+### Verifying the testnet contract
+
+Anyone can check that the deployed contract matches this source:
+
+1. Clone `https://github.com/pesakitdev/stellar` and check out commit `7bbe487` (or a later commit that does not change `contracts/bridge`).
+2. In `contracts/bridge`, run `stellar contract build`.
+3. Hash the output file `target/wasm32v1-none/release/pesakit_bridge.wasm` with SHA-256.
+4. The hash should be `16b1b4739d0225dab9a7036be7cb6778a31bae50af124b0d028659744e17355b`, the wasm hash of contract `CDOO6HK7UJYBCDKC6WKIWI4AFEM2GGZ6I7R5TYG2YLANL7EYUX7PSOHF` on the explorer.
+
 Earlier testnet builds, kept for reference: `CC7IHCWLG25EORHZLWEWSTQGXKMUO2TK2TDVCMFNCB6ISCDWGWE75Q6P` (soroban-sdk 21, with the reversal event) and `CBHBAUR2ITTAU5GV7XWZFDI4TW3JVOJC27UDLXBGNBK6EAYPO62747MC` (without it). Mainnet deployment is not yet scheduled; the testnet deployment is part of Tranche 1 (target: January 2027).
 
 ## Integration Partners

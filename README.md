@@ -75,7 +75,15 @@ Anyone can check that the deployed contract matches this source:
 2. Hash the file with SHA-256. The hash should be `8ec12e421a7b11fc61a044edddac1ab59c79044deaec0fd77dd40a2ff276c3c1`, the wasm hash of contract `CB4XNHY22TXAI2OUMUGHIK2I3S7BWCTJNV6ERFWDLJBKJMZRTJDVKZTE`.
 3. To rebuild it yourself, use the release workflow (`.github/workflows/release.yml`), which builds on GitHub with pinned tooling. A local `stellar contract build` gives a different hash, so compare against the release asset.
 
-Earlier testnet builds, kept for reference: `CDOO6HK7UJYBCDKC6WKIWI4AFEM2GGZ6I7R5TYG2YLANL7EYUX7PSOHF` (soroban-sdk 28, built locally, not linked on the explorer), `CC7IHCWLG25EORHZLWEWSTQGXKMUO2TK2TDVCMFNCB6ISCDWGWE75Q6P` (soroban-sdk 21, with the reversal event) and `CBHBAUR2ITTAU5GV7XWZFDI4TW3JVOJC27UDLXBGNBK6EAYPO62747MC` (without it). Mainnet deployment is not yet scheduled; the testnet deployment is part of Tranche 1 (target: January 2027).
+### Releasing a new contract version
+
+1. Merge the change to `main` and make sure CI passes.
+2. Create a version tag, for example `v0.2.4`, and push it. The release workflow builds the contract, publishes a GitHub release with the wasm and its SHA-256 hash, and sends the hash to Stellar Expert.
+3. Check that the release exists and note its wasm hash.
+4. Deploy the release wasm (not a local build) with `stellar contract deploy`, then run `initialize` and `register_agent`.
+5. Add the new contract ID and wasm hash to this README, and update the website.
+
+Earlier testnet builds, kept for reference: `CDOO6HK7UJYBCDKC6WKIWI4AFEM2GGZ6I7R5TYG2YLANL7EYUX7PSOHF` (soroban-sdk 28, built locally, not linked on the explorer), `CC7IHCWLG25EORHZLWEWSTQGXKMUO2TK2TDVCMFNCB6ISCDWGWE75Q6P` (soroban-sdk 21, with the reversal event) and `CBHBAUR2ITTAU5GV7XWZFDI4TW3JVOJC27UDLXBGNBK6EAYPO62747MC` (without it). Mainnet deployment is scheduled for the first week of April 2027.
 
 ## Integration Partners
 

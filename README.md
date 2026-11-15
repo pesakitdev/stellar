@@ -58,9 +58,13 @@ Conversions move USDC from the reserve account to the agent with a token transfe
 
 ## Testnet Deployment
 
-A testnet deployment will follow in Tranche 1 (target: January 2027).
+The bridge contract is deployed on Stellar testnet. The current version emits `ConversionReversed` events.
 
-Testnet contract ID: _not yet deployed_
+- Testnet contract ID: `CC7IHCWLG25EORHZLWEWSTQGXKMUO2TK2TDVCMFNCB6ISCDWGWE75Q6P`
+- Test USDC (testnet only, no value): `CATPOI2F4AXIPYIMLA2Z6FNEXXHDLT3RKVKTGG3FGLASXXBOIS5MSP3J`
+- Network: Stellar testnet (`Test SDF Network ; September 2015`)
+
+An earlier build without the reversal event is at `CBHBAUR2ITTAU5GV7XWZFDI4TW3JVOJC27UDLXBGNBK6EAYPO62747MC`. Mainnet deployment is not yet scheduled; the testnet deployment is part of Tranche 1 (target: January 2027).
 
 ## Integration Partners
 

@@ -24,6 +24,7 @@ Full interactive diagram: <https://pesakit.ai/stellar/PesaKit-Stellar-Architectu
 | `register_agent` | Register an agent's Stellar address | Admin |
 | `convert` | Record a KES→USDC conversion and credit USDC | Stellar Service (admin-authorized) |
 | `reverse_convert` | Reverse a conversion for error recovery, with a short reason code | Admin |
+| `return_usdc` | Move USDC from an agent's wallet back to the reserve and record it; PesaKit then pays the KES off-chain | Admin and the agent's wallet |
 | `pause` / `unpause` | Halt or resume new conversions | Admin |
 | `set_limits` | Update per-transaction or daily limits | Admin |
 | `transfer_admin` | Hand the admin role to a new address | Admin |
@@ -32,6 +33,9 @@ Full interactive diagram: <https://pesakit.ai/stellar/PesaKit-Stellar-Architectu
 | `get_conversion` | Read a conversion record by ID | Read-only |
 | `get_total_converted` | Read cumulative USDC credited | Read-only |
 | `get_agent_daily_total` | Read USDC credited today for an agent | Read-only |
+| `get_return` | Read a return record by ID | Read-only |
+| `get_total_returned` | Read cumulative USDC returned to the reserve | Read-only |
+| `get_agent_daily_returned` | Read USDC an agent returned today | Read-only |
 
 ## On-chain Metric
 
@@ -42,7 +46,7 @@ A reversal emits a `ConversionReversed` event with the conversion ID, agent ID, 
 ## Transaction Limits
 
 - Maximum per transaction: $100 USDC
-- Maximum per agent per day: KSh 100,000 (about $750 at the current rate), enforced by the Bridge Controller. The contract enforces a USDC daily cap as a backstop.
+- Maximum per agent per day: KSh 100,000 (about $750 at the current rate), enforced by the Bridge Controller. The contract enforces a USDC daily cap as a backstop. Daily totals reset at midnight Nairobi time (21:00 UTC). Returns to the reserve have their own daily total, so each direction has its own limit.
 - Bridge reserve: 2-of-3 multisig account, all keys held by PesaKit
 
 ## Build

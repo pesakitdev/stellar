@@ -173,8 +173,9 @@ fn convert_enforces_daily_limit_and_resets_next_day() {
         BridgeError::AmountExceedsDailyLimit
     );
 
-    // Limits are per agent per day, so the next UTC day starts again.
-    f.env.ledger().with_mut(|l| l.timestamp = 11 * DAY + 5);
+    // Limits are per agent per day, and the day changes at midnight Nairobi time
+    // (21:00 UTC). Day 10 started at 9 * DAY + 21h UTC; the next day starts at 10 * DAY + 21h.
+    f.env.ledger().with_mut(|l| l.timestamp = 10 * DAY + 21 * 3_600 + 5);
     f.client
         .convert(&sid(&f, "conv-3"), &sid(&f, "agent-1"), &1, &(70 * USDC));
     assert_eq!(
@@ -182,6 +183,22 @@ fn convert_enforces_daily_limit_and_resets_next_day() {
         70 * USDC
     );
     assert_eq!(f.client.get_total_converted(), 160 * USDC);
+}
+
+#[test]
+fn daily_limit_does_not_reset_at_utc_midnight() {
+    let f = setup();
+    // 10 * DAY is 00:00 UTC, which is 03:00 Nairobi: still the same Nairobi day.
+    f.client
+        .convert(&sid(&f, "conv-1"), &sid(&f, "agent-1"), &1, &(90 * USDC));
+    f.env.ledger().with_mut(|l| l.timestamp = 10 * DAY + 20 * 3_600 + 3_599);
+    let over = f
+        .client
+        .try_convert(&sid(&f, "conv-2"), &sid(&f, "agent-1"), &1, &(70 * USDC));
+    assert_eq!(
+        over.unwrap_err().unwrap(),
+        BridgeError::AmountExceedsDailyLimit
+    );
 }
 
 #[test]
@@ -390,4 +407,112 @@ fn transfer_admin_moves_control() {
     let new_admin = Address::generate(&f.env);
     f.client.transfer_admin(&new_admin);
     assert_eq!(f.client.get_state().admin, new_admin);
+}
+
+/// Gives the agent's wallet USDC to return, as if it had been converted and held.
+fn fund_agent(f: &Fixture, amount: i128) {
+    StellarAssetClient::new(&f.env, &f.usdc).mint(&f.agent_wallet, &amount);
+}
+
+#[test]
+fn return_usdc_moves_usdc_to_reserve_and_records_it() {
+    let f = setup();
+    f.client
+        .convert(&sid(&f, "conv-1"), &sid(&f, "agent-1"), &6_500, &(50 * USDC));
+    let reserve_before = token_balance(&f, &f.reserve);
+
+    let record = f
+        .client
+        .return_usdc(&sid(&f, "ret-1"), &sid(&f, "agent-1"), &3_900, &(30 * USDC));
+
+    assert_eq!(record.kes_amount, 3_900);
+    assert_eq!(record.usdc_amount, 30 * USDC);
+    assert_eq!(token_balance(&f, &f.agent_wallet), 20 * USDC);
+    assert_eq!(token_balance(&f, &f.reserve), reserve_before + 30 * USDC);
+    assert_eq!(f.client.get_total_returned(), 30 * USDC);
+    assert_eq!(f.client.get_agent_daily_returned(&sid(&f, "agent-1")), 30 * USDC);
+    assert_eq!(f.client.get_return(&sid(&f, "ret-1")).usdc_amount, 30 * USDC);
+    // Conversions are counted apart from returns.
+    assert_eq!(f.client.get_agent_daily_total(&sid(&f, "agent-1")), 50 * USDC);
+    assert_eq!(f.client.get_total_converted(), 50 * USDC);
+}
+
+#[test]
+fn return_limits_are_separate_from_conversion_limits() {
+    let f = setup();
+    fund_agent(&f, 1_000 * USDC);
+    // Use 90 of the 150 daily conversion allowance.
+    f.client
+        .convert(&sid(&f, "conv-1"), &sid(&f, "agent-1"), &1, &(90 * USDC));
+
+    // Returns have their own daily total, so a full 100 + 50 is allowed.
+    f.client
+        .return_usdc(&sid(&f, "ret-1"), &sid(&f, "agent-1"), &1, &(100 * USDC));
+    f.client
+        .return_usdc(&sid(&f, "ret-2"), &sid(&f, "agent-1"), &1, &(50 * USDC));
+    let over = f
+        .client
+        .try_return_usdc(&sid(&f, "ret-3"), &sid(&f, "agent-1"), &1, &USDC);
+    assert_eq!(
+        over.unwrap_err().unwrap(),
+        BridgeError::AmountExceedsDailyLimit
+    );
+    let too_big = f
+        .client
+        .try_return_usdc(&sid(&f, "ret-4"), &sid(&f, "agent-1"), &1, &(101 * USDC));
+    assert_eq!(
+        too_big.unwrap_err().unwrap(),
+        BridgeError::AmountExceedsTransactionLimit
+    );
+
+    // Returning did not use any of the conversion allowance.
+    f.client
+        .convert(&sid(&f, "conv-2"), &sid(&f, "agent-1"), &1, &(60 * USDC));
+
+    // The next Nairobi day starts the return allowance again.
+    f.env.ledger().with_mut(|l| l.timestamp = 10 * DAY + 21 * 3_600 + 5);
+    f.client
+        .return_usdc(&sid(&f, "ret-5"), &sid(&f, "agent-1"), &1, &(100 * USDC));
+}
+
+#[test]
+fn return_rejects_short_balance_duplicates_unknown_agents_and_pause() {
+    let f = setup();
+    let short = f
+        .client
+        .try_return_usdc(&sid(&f, "ret-1"), &sid(&f, "agent-1"), &1, &USDC);
+    assert_eq!(
+        short.unwrap_err().unwrap(),
+        BridgeError::InsufficientAgentBalance
+    );
+
+    fund_agent(&f, 100 * USDC);
+    f.client
+        .return_usdc(&sid(&f, "ret-1"), &sid(&f, "agent-1"), &1, &USDC);
+    let dup = f
+        .client
+        .try_return_usdc(&sid(&f, "ret-1"), &sid(&f, "agent-1"), &1, &USDC);
+    assert_eq!(dup.unwrap_err().unwrap(), BridgeError::DuplicateReturnId);
+
+    let unknown = f
+        .client
+        .try_return_usdc(&sid(&f, "ret-2"), &sid(&f, "nobody"), &1, &USDC);
+    assert_eq!(
+        unknown.unwrap_err().unwrap(),
+        BridgeError::AgentNotRegistered
+    );
+
+    let zero = f
+        .client
+        .try_return_usdc(&sid(&f, "ret-3"), &sid(&f, "agent-1"), &1, &0);
+    assert_eq!(zero.unwrap_err().unwrap(), BridgeError::InvalidAmount);
+
+    f.client.pause();
+    let paused = f
+        .client
+        .try_return_usdc(&sid(&f, "ret-4"), &sid(&f, "agent-1"), &1, &USDC);
+    assert_eq!(paused.unwrap_err().unwrap(), BridgeError::BridgePaused);
+
+    let missing = f.client.try_get_return(&sid(&f, "ret-9"));
+    assert_eq!(missing.unwrap_err().unwrap(), BridgeError::ReturnNotFound);
 }

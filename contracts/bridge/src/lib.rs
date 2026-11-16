@@ -9,10 +9,13 @@ mod test;
 
 use soroban_sdk::{contract, contractimpl, token, Address, Env, String};
 
-use crate::types::{AgentAccount, BridgeError, BridgeState, ConversionRecord};
+use crate::types::{AgentAccount, BridgeError, BridgeState, ConversionRecord, ReturnRecord};
 
-/// Seconds in one calendar day. Daily limits reset at UTC midnight.
+/// Seconds in one calendar day.
 const SECONDS_PER_DAY: u64 = 86_400;
+/// Nairobi is UTC+3 all year (no daylight saving). Daily limits reset at midnight
+/// Nairobi time, which is 21:00 UTC.
+const NAIROBI_OFFSET_SECONDS: u64 = 3 * 3_600;
 /// conversion_id is generated off-chain and may be at most 64 characters.
 const MAX_CONVERSION_ID_LEN: u32 = 64;
 /// agent_id is PesaKit's internal ID and may be at most 32 characters.
@@ -22,7 +25,7 @@ const MAX_AGENT_ID_LEN: u32 = 32;
 const MAX_REASON_LEN: u32 = 32;
 
 fn day_of(timestamp: u64) -> u64 {
-    timestamp / SECONDS_PER_DAY
+    (timestamp + NAIROBI_OFFSET_SECONDS) / SECONDS_PER_DAY
 }
 
 fn load_state(env: &Env) -> Result<BridgeState, BridgeError> {
@@ -192,6 +195,81 @@ impl PesaKitBridge {
         Ok(record)
     }
 
+    /// Record an agent returning USDC to the reserve, the first half of getting KES back.
+    /// Moves USDC from the agent's wallet to the reserve account and emits UsdcReturned;
+    /// PesaKit then pays `kes_amount` out of custody into the agent's PesaKit KES wallet.
+    /// Both the admin and the agent's wallet must authorize. Returns have their own
+    /// per-transaction limit and their own daily total, counted apart from conversions.
+    pub fn return_usdc(
+        env: Env,
+        return_id: String,
+        agent_id: String,
+        kes_amount: i128,
+        usdc_amount: i128,
+    ) -> Result<ReturnRecord, BridgeError> {
+        let state = load_state(&env)?;
+        state.admin.require_auth();
+
+        if state.paused {
+            return Err(BridgeError::BridgePaused);
+        }
+        check_id(&return_id, MAX_CONVERSION_ID_LEN)?;
+        check_id(&agent_id, MAX_AGENT_ID_LEN)?;
+        if storage::get_return(&env, &return_id).is_some() {
+            return Err(BridgeError::DuplicateReturnId);
+        }
+        let agent = storage::get_agent(&env, &agent_id).ok_or(BridgeError::AgentNotRegistered)?;
+        // The agent's wallet authorizes at the top level, as the reserve does for convert,
+        // so its nested USDC transfer is accepted.
+        agent.stellar_address.require_auth();
+
+        if kes_amount <= 0 || usdc_amount <= 0 {
+            return Err(BridgeError::InvalidAmount);
+        }
+        if usdc_amount > state.max_per_tx {
+            return Err(BridgeError::AmountExceedsTransactionLimit);
+        }
+
+        let now = env.ledger().timestamp();
+        let today = day_of(now);
+        let new_daily_returned = storage::get_daily_returned(&env, &agent_id, today)
+            .checked_add(usdc_amount)
+            .ok_or(BridgeError::AmountExceedsDailyLimit)?;
+        if new_daily_returned > state.max_per_day {
+            return Err(BridgeError::AmountExceedsDailyLimit);
+        }
+
+        let token = token::Client::new(&env, &state.usdc_token);
+        if token.balance(&agent.stellar_address) < usdc_amount {
+            return Err(BridgeError::InsufficientAgentBalance);
+        }
+        token.transfer(&agent.stellar_address, &state.reserve_account, &usdc_amount);
+
+        storage::set_daily_returned(&env, &agent_id, today, new_daily_returned);
+        storage::set_total_returned(&env, storage::get_total_returned(&env) + usdc_amount);
+
+        let record = ReturnRecord {
+            return_id: return_id.clone(),
+            agent_id: agent_id.clone(),
+            stellar_address: agent.stellar_address.clone(),
+            kes_amount,
+            usdc_amount,
+            timestamp: now,
+            ledger_sequence: env.ledger().sequence(),
+        };
+        storage::set_return(&env, &return_id, &record);
+
+        events::emit_usdc_returned(
+            &env,
+            return_id,
+            agent_id,
+            agent.stellar_address,
+            kes_amount,
+            usdc_amount,
+        );
+        Ok(record)
+    }
+
     /// Reverse a conversion (error recovery). Admin only.
     /// Marks the conversion record as reversed and removes its amount from the
     /// agent's lifetime and daily totals, so the agent's limits reflect net
@@ -317,6 +395,21 @@ impl PesaKitBridge {
         conversion_id: String,
     ) -> Result<ConversionRecord, BridgeError> {
         storage::get_conversion(&env, &conversion_id).ok_or(BridgeError::ConversionNotFound)
+    }
+
+    /// Read a specific return record by ID.
+    pub fn get_return(env: Env, return_id: String) -> Result<ReturnRecord, BridgeError> {
+        storage::get_return(&env, &return_id).ok_or(BridgeError::ReturnNotFound)
+    }
+
+    /// Read cumulative USDC returned to the reserve. Returns 0 before any return.
+    pub fn get_total_returned(env: Env) -> i128 {
+        storage::get_total_returned(&env)
+    }
+
+    /// Read USDC an agent returned today. Returns 0 for an unknown agent.
+    pub fn get_agent_daily_returned(env: Env, agent_id: String) -> i128 {
+        storage::get_daily_returned(&env, &agent_id, day_of(env.ledger().timestamp()))
     }
 
     /// Read cumulative USDC credited (on-chain metric for SCF milestone).

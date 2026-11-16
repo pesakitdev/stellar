@@ -28,7 +28,7 @@ pub struct AgentAccount {
     pub stellar_address: Address,
     /// Total USDC credited to this agent since deployment.
     pub lifetime_converted: i128,
-    /// USDC credited today (resets at UTC midnight).
+    /// USDC credited today (resets at midnight Nairobi time).
     pub today_converted: i128,
     /// Ledger timestamp of the last conversion (seconds since Unix epoch).
     pub last_conversion_ts: u64,
@@ -83,4 +83,28 @@ pub enum BridgeError {
     InvalidId = 14,
     /// Added in Tranche 1: the agent is already registered.
     AgentAlreadyRegistered = 15,
+    /// A return with this ID already exists.
+    DuplicateReturnId = 16,
+    /// The agent's wallet holds less USDC than the amount to return.
+    InsufficientAgentBalance = 17,
+    /// No return exists for the given ID.
+    ReturnNotFound = 18,
+}
+
+/// Record of an agent returning USDC to the reserve, keyed by return_id.
+/// The return triggers PesaKit's KES payout from custody off-chain.
+#[contracttype]
+#[derive(Debug)]
+pub struct ReturnRecord {
+    /// Unique, generated off-chain, max 64 chars.
+    pub return_id: String,
+    /// PesaKit agent ID, max 32 chars.
+    pub agent_id: String,
+    pub stellar_address: Address,
+    /// KES PesaKit will pay out (integer, no decimal).
+    pub kes_amount: i128,
+    /// USDC returned to the reserve (stroops).
+    pub usdc_amount: i128,
+    pub timestamp: u64,
+    pub ledger_sequence: u32,
 }

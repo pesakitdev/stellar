@@ -73,3 +73,19 @@ pub fn emit_agent_registered(env: &Env, agent_id: String, stellar_address: Addre
         (agent_id, stellar_address),
     );
 }
+
+/// Emitted when an agent returns USDC to the reserve. PesaKit watches for it and pays
+/// `kes_amount` out of custody into the agent's PesaKit KES wallet.
+pub fn emit_usdc_returned(
+    env: &Env,
+    return_id: String,
+    agent_id: String,
+    stellar_address: Address,
+    kes_amount: i128,
+    usdc_amount: i128,
+) {
+    env.events().publish(
+        (Symbol::new(env, "UsdcReturned"), stellar_address.clone()),
+        (return_id, agent_id, stellar_address, kes_amount, usdc_amount),
+    );
+}
